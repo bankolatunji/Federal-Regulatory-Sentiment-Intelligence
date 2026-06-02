@@ -1,0 +1,1595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Federal Regulation Sentiment Intelligence</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,300;0,400;0,700;0,900;1,400&family=Source+Sans+3:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    /* ─── Variables & Reset ──────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      /* Federal color system */
+      --fed-navy:    #002868;   /* US flag deep blue */
+      --fed-navy-2:  #003580;
+      --fed-navy-3:  #1a4a9a;
+      --fed-red:     #BF0A30;   /* US flag red */
+      --fed-red-2:   #8B0000;
+      --fed-gold:    #B8960C;   /* Executive gold */
+      --fed-gold-l:  #D4AA0F;
+      --fed-gold-bg: #FDF6DC;   /* Gold wash */
+
+      /* Surface colors */
+      --bg:          #F2F4F7;   /* Page background */
+      --bg-2:        #E8ECF2;   /* Sidebar */
+      --surface:     #FFFFFF;   /* Cards */
+      --surface-2:   #F7F9FC;   /* Sub-cards */
+      --border:      #CBD5E0;
+      --border-2:    #D4AF37;   /* Gold border accent */
+
+      /* Text */
+      --text:        #1A2744;   /* Primary text */
+      --text-2:      #374869;   /* Secondary text */
+      --muted:       #6B7FA3;   /* Muted text */
+      --white:       #FFFFFF;
+
+      /* Status */
+      --green:       #1a7a40;
+      --green-bg:    #E6F4EE;
+      --red:         #BF0A30;
+      --red-bg:      #FDE8EC;
+      --amber:       #8B6000;
+      --amber-bg:    #FFF3CD;
+
+      --r:           4px;
+      --r-lg:        8px;
+      --shadow:      0 1px 4px rgba(0,40,104,0.10), 0 4px 16px rgba(0,40,104,0.06);
+      --shadow-lg:   0 2px 8px rgba(0,40,104,0.12), 0 8px 32px rgba(0,40,104,0.08);
+    }
+
+    html, body { height: 100%; overflow: hidden; }
+    body {
+      font-family: 'Source Sans 3', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 14px;
+      line-height: 1.55;
+    }
+
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: var(--bg-2); }
+    ::-webkit-scrollbar-thumb { background: #B0BDD4; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--fed-navy-3); }
+
+    /* ─── Top Accent Bar (flag colors) ──────────────────────────────────────── */
+    .accent-bar {
+      position: fixed; top: 0; left: 0; right: 0; height: 4px;
+      background: linear-gradient(90deg,
+        var(--fed-navy) 0%, var(--fed-navy) 33%,
+        #FFFFFF 33%, #FFFFFF 36%,
+        var(--fed-red) 36%, var(--fed-red) 100%);
+      z-index: 200;
+    }
+
+    /* ─── Header ─────────────────────────────────────────────────────────────── */
+    #hdr {
+      position: fixed; top: 4px; left: 0; right: 0; height: 64px;
+      background: var(--fed-navy);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 24px; z-index: 100;
+      box-shadow: 0 2px 12px rgba(0,40,104,0.35);
+    }
+
+    .brand { display: flex; align-items: center; gap: 14px; }
+    .brand-seal {
+      width: 38px; height: 38px; flex-shrink: 0;
+      background: var(--white);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px;
+      border: 2px solid rgba(255,255,255,0.3);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+    .brand-text { border-left: 2px solid rgba(255,255,255,0.2); padding-left: 14px; }
+    .brand-name {
+      font-family: 'Merriweather', serif; font-size: 15px; font-weight: 700;
+      color: #FFFFFF; letter-spacing: 0.3px; line-height: 1.2;
+    }
+    .brand-sub {
+      font-size: 9px; color: rgba(255,255,255,0.65);
+      letter-spacing: 2.2px; text-transform: uppercase; margin-top: 1px;
+    }
+    .hdr-divider {
+      width: 1px; height: 32px; background: rgba(255,255,255,0.2); margin: 0 4px;
+    }
+    .hdr-right { display: flex; align-items: center; gap: 12px; }
+
+    /* Agent status pill */
+    .agent-pill {
+      display: flex; align-items: center; gap: 6px;
+      padding: 4px 12px; border-radius: 20px;
+      font-size: 10.5px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase;
+      border: 1.5px solid; transition: all .3s;
+    }
+    .agent-pill.loading { border-color: rgba(255,200,50,.6); color: #FFD700; background: rgba(255,200,50,.1); }
+    .agent-pill.ready   { border-color: rgba(100,220,140,.6); color: #5EE88A; background: rgba(100,220,140,.1); }
+    .agent-pill.error   { border-color: rgba(255,120,120,.6); color: #FF8888; background: rgba(255,120,120,.1); }
+    .pill-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+    .pill-dot.pulse { animation: pulse 1.4s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.2} }
+
+    /* Temperature control */
+    .temp-wrap { display: flex; align-items: center; gap: 7px; }
+    .temp-lbl { font-size: 10px; color: rgba(255,255,255,0.55); text-transform: uppercase; letter-spacing: 1.5px; }
+    .temp-sel {
+      background: rgba(255,255,255,0.1); border: 1.5px solid rgba(255,255,255,0.25);
+      color: #FFD700; padding: 5px 28px 5px 10px;
+      border-radius: var(--r); font-family: 'JetBrains Mono', monospace; font-size: 11.5px;
+      cursor: pointer; outline: none; appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='6' viewBox='0 0 9 6'%3E%3Cpath d='M.5 1l4 4 4-4' stroke='%23FFD700' stroke-width='1.4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 8px center;
+      transition: border-color .2s;
+    }
+    .temp-sel:hover, .temp-sel:focus { border-color: rgba(255,215,0,0.7); }
+    .temp-sel option { background: var(--fed-navy); color: #FFFFFF; }
+
+    .settings-btn {
+      background: rgba(255,255,255,0.1); border: 1.5px solid rgba(255,255,255,0.25);
+      color: rgba(255,255,255,0.8); padding: 5px 12px; border-radius: var(--r);
+      cursor: pointer; font-size: 12.5px; font-family: 'Source Sans 3', sans-serif;
+      display: flex; align-items: center; gap: 5px; transition: all .2s;
+    }
+    .settings-btn:hover { border-color: rgba(255,215,0,0.6); color: #FFD700; background: rgba(255,215,0,0.08); }
+
+    /* ─── Layout ─────────────────────────────────────────────────────────────── */
+    #layout { display: flex; height: 100vh; padding-top: 68px; }
+
+    /* ─── Sidebar ────────────────────────────────────────────────────────────── */
+    #sidebar {
+      width: 256px; flex-shrink: 0;
+      background: var(--surface);
+      border-right: 2px solid var(--fed-navy);
+      display: flex; flex-direction: column; overflow-y: auto;
+    }
+
+    /* Sidebar header band */
+    .sb-band {
+      background: var(--fed-navy);
+      padding: 10px 14px 9px;
+      color: rgba(255,255,255,0.9);
+      font-size: 9px; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase;
+    }
+
+    .sb-section { padding: 14px 14px 8px; }
+    .sb-title {
+      font-size: 9px; font-weight: 700; letter-spacing: 2.5px;
+      text-transform: uppercase; color: var(--fed-navy);
+      margin-bottom: 10px;
+      padding-bottom: 6px;
+      border-bottom: 2px solid var(--fed-navy);
+      display: flex; align-items: center; gap: 6px;
+    }
+    .sb-title::before {
+      content: ''; display: inline-block;
+      width: 3px; height: 14px;
+      background: var(--fed-red); border-radius: 2px;
+    }
+
+    /* Model stat rows */
+    .stat-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 5px 0; border-bottom: 1px solid var(--border);
+      font-size: 11.5px;
+    }
+    .stat-row:last-child { border-bottom: none; }
+    .stat-k { color: var(--muted); font-weight: 500; }
+    .stat-v { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text); }
+    .stat-v.accent { color: var(--fed-navy); font-weight: 600; }
+
+    .divider { border: none; border-top: 1px solid var(--border); margin: 6px 0; }
+
+    /* Sample chips */
+    .sample-chip {
+      display: block; width: 100%; text-align: left;
+      background: var(--surface-2); border: 1px solid var(--border);
+      color: var(--text-2); padding: 8px 10px;
+      border-radius: var(--r); font-size: 11px; line-height: 1.4;
+      cursor: pointer; transition: all .15s; margin-bottom: 5px;
+      font-family: 'Source Sans 3', sans-serif;
+    }
+    .sample-chip:hover { border-color: var(--fed-navy-3); background: #EEF2FA; color: var(--fed-navy); box-shadow: 0 1px 4px rgba(0,40,104,0.1); }
+    .chip-tag {
+      font-size: 9px; font-weight: 700; letter-spacing: 0.7px;
+      text-transform: uppercase; margin-bottom: 3px; display: flex; align-items: center; gap: 4px;
+    }
+    .chip-tag::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+    .chip-tag.neg  { color: var(--fed-red); }
+    .chip-tag.pos  { color: var(--green); }
+    .chip-tag.neu  { color: var(--amber); }
+
+    /* History */
+    .hist-item {
+      padding: 7px 10px; border-radius: var(--r);
+      border: 1px solid var(--border); margin-bottom: 5px;
+      cursor: pointer; transition: all .12s; font-size: 11.5px;
+      background: var(--surface-2);
+    }
+    .hist-item:hover { background: #EEF2FA; border-color: var(--fed-navy-3); }
+    .hist-sentiment {
+      font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .hist-text { color: var(--muted); margin-top: 2px; line-height: 1.3; }
+
+    /* ─── Analysis Panel (left) ─────────────────────────────────────────────── */
+    #analysis-panel { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: hidden; border-right: 1px solid var(--border); }
+
+    /* Input section */
+    #input-section {
+      flex-shrink: 0;
+      padding: 18px 24px 14px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      box-shadow: 0 2px 8px rgba(0,40,104,0.06);
+    }
+
+    .input-label-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+    .input-label {
+      font-size: 9px; font-weight: 700; letter-spacing: 2.5px;
+      text-transform: uppercase; color: var(--fed-navy);
+      display: flex; align-items: center; gap: 6px;
+    }
+    .input-label::before {
+      content: ''; display: inline-block;
+      width: 3px; height: 14px;
+      background: var(--fed-red); border-radius: 2px;
+    }
+    .input-hint { font-size: 11px; color: var(--muted); margin-left: auto; font-style: italic; }
+
+    #reg-input {
+      width: 100%;
+      background: var(--surface-2); border: 1.5px solid var(--border);
+      color: var(--text); padding: 12px 14px;
+      border-radius: var(--r); font-family: 'Source Sans 3', sans-serif;
+      font-size: 14px; line-height: 1.6; resize: vertical; min-height: 80px; max-height: 160px;
+      outline: none; transition: border-color .2s, box-shadow .2s;
+    }
+    #reg-input:focus {
+      border-color: var(--fed-navy-3);
+      box-shadow: 0 0 0 3px rgba(0,53,128,0.12);
+    }
+    #reg-input::placeholder { color: var(--muted); font-style: italic; }
+
+    .input-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; }
+    .char-count { font-size: 10.5px; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
+
+    .analyze-btn {
+      background: var(--fed-navy);
+      color: #FFFFFF; border: none;
+      padding: 9px 26px; border-radius: var(--r);
+      font-family: 'Source Sans 3', sans-serif; font-weight: 700;
+      font-size: 12px; letter-spacing: 1.2px; text-transform: uppercase;
+      cursor: pointer; transition: background .15s, box-shadow .15s, transform .1s;
+      display: flex; align-items: center; gap: 8px;
+      box-shadow: 0 2px 8px rgba(0,40,104,0.30);
+    }
+    .analyze-btn:hover { background: var(--fed-navy-2); box-shadow: 0 4px 14px rgba(0,40,104,0.35); }
+    .analyze-btn:active { transform: scale(.98); }
+    .analyze-btn:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+
+    /* ─── Output Area ────────────────────────────────────────────────────────── */
+    #output-area { flex: 1; overflow-y: auto; padding: 20px 24px 24px; }
+
+    /* Empty state */
+    .empty-state {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      height: 100%; gap: 14px; text-align: center; color: var(--muted);
+      padding: 40px;
+    }
+    .empty-seal {
+      width: 80px; height: 80px; border-radius: 50%;
+      background: var(--surface-2); border: 2px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 36px; opacity: .5;
+    }
+    .empty-title {
+      font-family: 'Merriweather', serif; font-size: 22px; color: var(--text-2);
+      font-weight: 700;
+    }
+    .empty-sub { font-size: 13px; line-height: 1.7; max-width: 400px; color: var(--muted); }
+    .empty-tag {
+      font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
+      color: var(--fed-navy); border: 1px solid var(--fed-navy);
+      padding: 3px 12px; border-radius: 2px;
+      background: rgba(0,40,104,.04);
+    }
+
+    /* ─── Result Card ────────────────────────────────────────────────────────── */
+    .result-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-top: 3px solid var(--fed-navy);
+      border-radius: var(--r-lg);
+      overflow: hidden;
+      box-shadow: var(--shadow-lg);
+      animation: slideIn .28s ease;
+    }
+    @keyframes slideIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+
+    /* Card heading band */
+    .rc-band {
+      background: var(--fed-navy);
+      padding: 7px 20px;
+      display: flex; align-items: center; gap: 10px;
+      font-size: 9px; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase;
+      color: rgba(255,255,255,0.7);
+    }
+    .rc-band-dot { width: 6px; height: 6px; border-radius: 50%; background: #FFD700; }
+
+    /* Card header */
+    .rc-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;
+      background: var(--surface-2);
+    }
+    .rc-reg-text {
+      font-family: 'Merriweather', serif; font-size: 14.5px; font-weight: 400;
+      color: var(--text); line-height: 1.5; flex: 1; font-style: italic;
+    }
+    .rc-reg-text::before { content: '\201C'; font-size: 20px; color: var(--fed-navy); line-height: 0; vertical-align: -4px; margin-right: 2px; }
+    .rc-reg-text::after  { content: '\201D'; font-size: 20px; color: var(--fed-navy); line-height: 0; vertical-align: -4px; margin-left: 2px; }
+
+    /* Sentiment badge */
+    .sentiment-badge {
+      flex-shrink: 0; padding: 6px 14px; border-radius: 3px;
+      font-size: 10.5px; font-weight: 800; letter-spacing: 1.3px; text-transform: uppercase;
+      border: 1.5px solid; white-space: nowrap;
+    }
+    .sb-negative { background: var(--red-bg); color: var(--fed-red); border-color: rgba(191,10,48,.3); }
+    .sb-positive { background: var(--green-bg); color: var(--green); border-color: rgba(26,122,64,.3); }
+    .sb-neutral  { background: var(--amber-bg); color: var(--amber); border-color: rgba(139,96,0,.3); }
+
+    /* Metrics row */
+    .rc-metrics {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      border-bottom: 1px solid var(--border);
+    }
+    .metric-cell {
+      padding: 14px 18px; border-right: 1px solid var(--border);
+    }
+    .metric-cell:last-child { border-right: none; }
+    .metric-label {
+      font-size: 9px; font-weight: 700; letter-spacing: 1.8px; text-transform: uppercase;
+      color: var(--muted); margin-bottom: 6px;
+    }
+    .metric-value {
+      font-family: 'Merriweather', serif; font-size: 30px; font-weight: 900;
+      color: var(--fed-navy); line-height: 1;
+    }
+    .metric-value .unit { font-size: 16px; color: var(--muted); font-weight: 400; }
+    .metric-sub { font-size: 10.5px; color: var(--muted); margin-top: 5px; }
+
+    /* Probability bars */
+    .rc-proba { padding: 16px 20px; border-bottom: 1px solid var(--border); background: var(--surface-2); }
+    .proba-title {
+      font-size: 9px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
+      color: var(--fed-navy); margin-bottom: 12px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .proba-title::before { content:''; width:3px; height:12px; background:var(--fed-red); border-radius:2px; }
+    .proba-row { display: flex; align-items: center; gap: 10px; margin-bottom: 9px; }
+    .proba-row:last-child { margin-bottom: 0; }
+    .proba-name { font-size: 12px; color: var(--text-2); width: 88px; flex-shrink: 0; font-weight: 500; }
+    .proba-track {
+      flex: 1; height: 8px; background: var(--bg-2);
+      border-radius: 4px; overflow: hidden; border: 1px solid var(--border);
+    }
+    .proba-fill {
+      height: 100%; border-radius: 4px;
+      transition: width .65s cubic-bezier(.4,0,.2,1);
+    }
+    .proba-fill.pos { background: linear-gradient(90deg, #1a7a40, #2ea055); }
+    .proba-fill.neu { background: linear-gradient(90deg, #8B6000, #B8860C); }
+    .proba-fill.neg { background: linear-gradient(90deg, var(--fed-red), #E04060); }
+    .proba-pct {
+      font-family: 'JetBrains Mono', monospace; font-size: 11.5px;
+      width: 44px; text-align: right; color: var(--text); flex-shrink: 0; font-weight: 500;
+    }
+
+    /* Claude explanation */
+    .rc-explain { padding: 18px 20px; }
+    .explain-header {
+      display: flex; align-items: center; gap: 10px; margin-bottom: 13px;
+      padding-bottom: 10px; border-bottom: 1px solid var(--border);
+    }
+    .claude-badge {
+      display: flex; align-items: center; gap: 7px;
+      background: linear-gradient(135deg, #7c3aed, #d97706);
+      padding: 3px 10px; border-radius: 12px;
+    }
+    .claude-badge-txt { font-size: 9px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: #FFFFFF; }
+    .explain-meta { font-size: 10.5px; color: var(--muted); }
+
+    .explain-content {
+      font-size: 13px; line-height: 1.75; color: var(--text-2);
+    }
+    .explain-content strong { color: var(--fed-navy); }
+    .explain-content p { margin-bottom: 8px; }
+    .explain-section { font-weight: 700; color: var(--fed-navy); margin-top: 12px; margin-bottom: 4px; }
+    .explain-list {
+      margin: 4px 0 12px 0; padding-left: 0; list-style: none; display: flex; flex-direction: column; gap: 8px;
+    }
+    .explain-list li {
+      display: flex; gap: 10px; align-items: flex-start;
+      background: var(--surface-2); border-left: 3px solid var(--fed-navy);
+      border-radius: var(--r); padding: 8px 12px; font-size: 12.5px; line-height: 1.6;
+    }
+    .explain-list li::before {
+      content: counter(list-item); counter-increment: list-item;
+      font-size: 9px; font-weight: 700; background: var(--fed-navy); color: #fff;
+      min-width: 18px; height: 18px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px;
+    }
+    .explain-list { counter-reset: list-item; }
+    mark.kw-neg { background: #fde8e8; color: #b91c1c; font-weight: 700; border-radius: 2px; padding: 0 2px; }
+    mark.kw-pos { background: #dcfce7; color: #15803d; font-weight: 700; border-radius: 2px; padding: 0 2px; }
+    mark.kw-neu { background: #fef9c3; color: #92400e; font-weight: 700; border-radius: 2px; padding: 0 2px; }
+
+    /* Pipeline trace */
+    .rc-pipeline {
+      padding: 9px 20px 11px;
+      border-top: 1px solid var(--border);
+      display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+      background: var(--surface-2);
+    }
+    .pipeline-label { font-size: 9px; color: var(--muted); letter-spacing: 1.2px; text-transform: uppercase; margin-right: 4px; font-weight: 700; }
+    .pipeline-step {
+      font-size: 9.5px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
+      padding: 3px 9px; border-radius: 2px;
+      background: var(--fed-navy); color: #FFFFFF;
+    }
+    .pipeline-arrow { font-size: 9px; color: var(--muted); }
+
+    /* Similar examples */
+    .rc-similar { padding: 0 20px 14px; background: var(--surface-2); }
+    .similar-title {
+      font-size: 9px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
+      color: var(--fed-navy); margin-bottom: 8px; padding-top: 12px;
+    }
+    .similar-item {
+      font-size: 11.5px; color: var(--muted); padding: 7px 10px;
+      background: var(--surface); border-radius: var(--r);
+      border-left: 3px solid var(--fed-navy); margin-bottom: 5px; line-height: 1.5;
+      border-top: 1px solid var(--border); border-right: 1px solid var(--border); border-bottom: 1px solid var(--border);
+      display: flex; align-items: flex-start; gap: 8px;
+    }
+    .similar-empty { font-style: italic; border-left-color: var(--border); display: block; }
+    .similar-sentiment-badge {
+      font-size: 9px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+      padding: 2px 6px; border-radius: 3px; white-space: nowrap; margin-top: 2px;
+      background: var(--fed-navy); color: #fff; flex-shrink: 0;
+    }
+    .similar-body { flex: 1; display: flex; flex-direction: column; gap: 3px; }
+    .similar-agency {
+      font-size: 9.5px; font-weight: 700; color: var(--fed-navy);
+      text-transform: uppercase; letter-spacing: 0.8px;
+    }
+    .similar-text { word-break: break-word; white-space: normal; }
+
+    /* Analyzing state */
+    .analyzing-state {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      height: 100%; gap: 16px;
+    }
+    .analyze-spinner {
+      width: 44px; height: 44px;
+      border: 3px solid var(--border); border-top-color: var(--fed-navy);
+      border-radius: 50%; animation: spin .7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .analyzing-text { font-family: 'Merriweather', serif; font-size: 18px; color: var(--text-2); font-weight: 700; }
+    .analyzing-sub { font-size: 11.5px; color: var(--muted); font-style: italic; }
+
+    /* ─── Settings Modal ──────────────────────────────────────────────────────── */
+    .overlay {
+      position: fixed; inset: 0; background: rgba(0,40,104,.55);
+      display: none; align-items: center; justify-content: center;
+      z-index: 200; backdrop-filter: blur(6px);
+    }
+    .overlay.open { display: flex; }
+    .modal {
+      background: var(--surface); border: 1px solid var(--border);
+      border-top: 4px solid var(--fed-navy);
+      border-radius: var(--r-lg); width: 440px; max-width: 95vw;
+      box-shadow: 0 20px 60px rgba(0,40,104,.25);
+    }
+    .modal-hdr {
+      padding: 16px 22px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      background: var(--surface-2);
+    }
+    .modal-title {
+      font-family: 'Merriweather', serif; font-size: 17px; color: var(--fed-navy);
+      font-weight: 700;
+    }
+    .modal-close {
+      background: none; border: none; color: var(--muted);
+      font-size: 17px; cursor: pointer; transition: color .15s;
+    }
+    .modal-close:hover { color: var(--fed-red); }
+    .modal-body { padding: 22px; }
+    .field { margin-bottom: 18px; }
+    .field-lbl {
+      font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
+      color: var(--fed-navy); display: block; margin-bottom: 6px;
+    }
+    .field-input {
+      width: 100%; background: var(--surface-2); border: 1.5px solid var(--border);
+      color: var(--text); padding: 9px 12px; border-radius: var(--r);
+      font-family: 'JetBrains Mono', monospace; font-size: 12px; outline: none;
+      transition: border-color .2s, box-shadow .2s;
+    }
+    .field-input:focus { border-color: var(--fed-navy-3); box-shadow: 0 0 0 3px rgba(0,53,128,.1); }
+    .field-input::placeholder { color: var(--muted); }
+    .field-hint { font-size: 11px; color: var(--muted); margin-top: 5px; line-height: 1.45; }
+    .modal-save {
+      width: 100%; background: var(--fed-navy); color: #FFFFFF;
+      border: none; padding: 10px; border-radius: var(--r);
+      font-weight: 700; font-size: 12px; letter-spacing: 1.2px; text-transform: uppercase;
+      cursor: pointer; transition: background .15s;
+      font-family: 'Source Sans 3', sans-serif;
+    }
+    .modal-save:hover { background: var(--fed-navy-2); }
+
+    /* ─── Toast ───────────────────────────────────────────────────────────────── */
+    #toast {
+      position: fixed; bottom: 22px; right: 22px;
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); padding: 9px 16px; border-radius: var(--r);
+      font-size: 12.5px; box-shadow: var(--shadow-lg);
+      transform: translateY(14px); opacity: 0; transition: all .25s;
+      z-index: 300; max-width: 310px;
+      border-left: 4px solid var(--fed-navy);
+    }
+    #toast.show { transform: translateY(0); opacity: 1; }
+    #toast.ok  { border-left-color: var(--green); color: var(--green); }
+    #toast.err { border-left-color: var(--fed-red); color: var(--fed-red); }
+
+    /* ─── Chat Panel (right, always visible) ───────────────────────────────── */
+    #chat-panel {
+      width: 380px; flex-shrink: 0;
+      display: flex; flex-direction: column; overflow: hidden;
+      background: var(--surface);
+    }
+    .chat-panel-hdr {
+      background: var(--fed-navy); padding: 10px 14px;
+      display: flex; align-items: center; justify-content: space-between;
+      flex-shrink: 0;
+    }
+    .chat-panel-title {
+      font-size: 11px; font-weight: 700; letter-spacing: 1.5px;
+      text-transform: uppercase; color: #fff;
+      display: flex; align-items: center; gap: 7px;
+    }
+    .chat-clear-btn {
+      font-size: 10px; font-weight: 600; letter-spacing: 0.5px;
+      background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.25);
+      color: rgba(255,255,255,0.75); padding: 3px 9px; border-radius: var(--r);
+      cursor: pointer; transition: all .15s; font-family: 'Source Sans 3', sans-serif;
+    }
+    .chat-clear-btn:hover { background: rgba(255,255,255,0.2); color: #fff; }
+    .chat-context-strip {
+      display: none; flex-shrink: 0; gap: 8px; align-items: center; flex-wrap: wrap;
+      padding: 9px 12px; border-bottom: 1px solid var(--border);
+      background: linear-gradient(to bottom, #fffdf6, var(--surface));
+      font-size: 11px; color: var(--text-2);
+    }
+    .chat-context-strip.active { display: flex; }
+    .context-chip {
+      display: inline-flex; align-items: center; gap: 5px;
+      border: 1px solid var(--border); background: var(--surface);
+      border-radius: 999px; padding: 3px 8px; line-height: 1.2;
+      white-space: nowrap;
+    }
+    .context-chip strong { color: var(--fed-navy); font-weight: 700; }
+    .context-stale {
+      display: none; flex-shrink: 0; padding: 7px 12px;
+      border-bottom: 1px solid #ead8a2; background: #fff8df;
+      color: #7a5a00; font-size: 11px; line-height: 1.35;
+    }
+    .context-stale.active { display: block; }
+    .chat-panel-empty {
+      flex: 1; display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 10px; padding: 30px 20px; text-align: center;
+    }
+    .chat-panel-empty-icon { font-size: 32px; opacity: .25; }
+    .chat-panel-empty-title { font-family: 'Merriweather', serif; font-size: 14px; color: var(--text-2); font-weight: 700; }
+    .chat-panel-empty-sub { font-size: 12px; color: var(--muted); line-height: 1.6; }
+    .chat-panel-msgs {
+      flex: 1; overflow-y: auto; padding: 14px 14px 6px;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+    .chat-panel-input-bar {
+      flex-shrink: 0; padding: 10px 12px;
+      border-top: 1px solid var(--border);
+      background: var(--surface-2);
+      display: flex; gap: 8px; align-items: flex-end;
+    }
+
+    /* ─── Pinned Chat Bar (legacy, repurposed) ───────────────────────────────── */
+    #chat-bar {
+      display: none;            /* kept for compatibility, unused */
+      flex-shrink: 0;
+      border-top: 2px solid var(--fed-gold-l);
+      background: linear-gradient(to bottom, #fffcf0, #fff9e8);
+      padding: 10px 24px 13px;
+      box-shadow: 0 -2px 12px rgba(0,40,104,.08);
+    }
+    .chat-bar-label {
+      font-size: 9.5px; font-weight: 700; letter-spacing: 1.8px; text-transform: uppercase;
+      color: var(--fed-navy); margin-bottom: 8px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .chat-bar-icon { font-size: 13px; }
+    #chat-bar-context {
+      font-weight: 400; letter-spacing: 0; text-transform: none; font-size: 10px;
+      color: var(--muted); margin-left: 4px;
+    }
+    .chat-bar-row { display: flex; gap: 10px; align-items: flex-end; }
+    .chat-input {
+      flex: 1; background: var(--surface); border: 1.5px solid var(--border);
+      color: var(--text); padding: 10px 13px; border-radius: var(--r);
+      font-family: 'Source Sans 3', sans-serif; font-size: 13.5px;
+      line-height: 1.5; resize: none; min-height: 44px; max-height: 120px;
+      outline: none; transition: border-color .2s, box-shadow .2s;
+    }
+    .chat-input:focus {
+      border-color: var(--fed-navy-3);
+      box-shadow: 0 0 0 3px rgba(0,53,128,.1);
+    }
+    .chat-input::placeholder { color: var(--muted); font-style: italic; }
+    .chat-send-btn {
+      background: var(--fed-navy); color: #fff; border: none;
+      padding: 10px 20px; border-radius: var(--r);
+      font-family: 'Source Sans 3', sans-serif; font-weight: 700;
+      font-size: 12px; letter-spacing: 0.8px; text-transform: uppercase;
+      cursor: pointer; transition: background .15s; white-space: nowrap;
+      box-shadow: 0 2px 6px rgba(0,40,104,.25); display: flex; align-items: center; gap: 6px;
+    }
+    .chat-send-btn:hover { background: var(--fed-navy-2); }
+    .chat-send-btn:disabled { opacity: .4; cursor: not-allowed; }
+    .chat-bar-hint { font-size: 10px; color: var(--muted); margin-top: 6px; font-style: italic; }
+
+    /* ─── Chat Thread (inside #output-area, below result card) ──────────────── */
+    .chat-thread {
+      margin-top: 20px;
+      padding: 18px 0 8px;
+      border-top: 2px dashed var(--border);
+      display: flex; flex-direction: column; gap: 14px;
+    }
+    .chat-thread-label {
+      font-size: 9px; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase;
+      color: var(--muted); text-align: center; margin-bottom: 4px;
+    }
+    .chat-msg { display: flex; gap: 10px; align-items: flex-start; }
+    .chat-msg.user { flex-direction: row-reverse; }
+    .chat-avatar {
+      width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 700;
+    }
+    .chat-msg.user .chat-avatar { background: var(--fed-navy); color: #fff; }
+    .chat-msg.assistant .chat-avatar { background: linear-gradient(135deg,#7c3aed,#d97706); color: #fff; font-size: 10px; }
+    .chat-bubble {
+      max-width: 80%; padding: 11px 15px; border-radius: 10px;
+      font-size: 13.5px; line-height: 1.7; color: var(--text);
+    }
+    .chat-msg.user .chat-bubble {
+      background: var(--fed-navy); color: #fff;
+      border-bottom-right-radius: 3px;
+    }
+    .chat-msg.assistant .chat-bubble {
+      background: var(--surface); border: 1px solid var(--border);
+      border-bottom-left-radius: 3px;
+      box-shadow: 0 1px 4px rgba(0,40,104,.06);
+    }
+    .chat-msg.assistant .chat-bubble strong { color: var(--fed-navy); }
+    .chat-msg.assistant .chat-bubble p { margin-bottom: 7px; }
+    .chat-msg.assistant .chat-bubble p:last-child { margin-bottom: 0; }
+    .chat-msg.assistant .chat-bubble ol.explain-list { margin-top: 6px; }
+    .suggestion-row {
+      display: flex; flex-wrap: wrap; gap: 7px; margin-top: 8px;
+      padding-left: 40px;
+    }
+    .suggestion-chip {
+      border: 1px solid var(--border); background: var(--surface);
+      color: var(--fed-navy); border-radius: 999px; padding: 5px 9px;
+      font-family: 'Source Sans 3', sans-serif; font-size: 11px; font-weight: 700;
+      cursor: pointer; transition: border-color .15s, box-shadow .15s, transform .15s;
+    }
+    .suggestion-chip:hover {
+      border-color: var(--fed-navy-3);
+      box-shadow: 0 1px 5px rgba(0,40,104,.12);
+      transform: translateY(-1px);
+    }
+    .chat-thinking { display: flex; gap: 5px; align-items: center; padding: 6px 2px; }
+    .chat-thinking span {
+      width: 7px; height: 7px; border-radius: 50%; background: var(--muted);
+      animation: chatDot 1.2s infinite;
+    }
+    .chat-thinking span:nth-child(2) { animation-delay: .2s; }
+    .chat-thinking span:nth-child(3) { animation-delay: .4s; }
+    @keyframes chatDot { 0%,80%,100%{opacity:.2;transform:scale(.8)} 40%{opacity:1;transform:scale(1)} }
+  </style>
+</head>
+<body>
+
+<!-- Tri-color accent bar -->
+<div class="accent-bar"></div>
+
+<!-- ── Header ─────────────────────────────────────────────────────────────────── -->
+<header id="hdr">
+  <div class="brand">
+    <div class="brand-seal">⚖</div>
+    <div class="brand-text">
+      <div class="brand-name">Federal Regulation Sentiment Intelligence</div>
+      <div class="brand-sub">LangGraph · FAISS · Claude Haiku · Sentence Embeddings</div>
+    </div>
+  </div>
+  <div class="hdr-right">
+    <div id="agent-pill" class="agent-pill loading">
+      <div class="pill-dot pulse" id="pill-dot"></div>
+      <span id="pill-text">Loading Agent…</span>
+    </div>
+    <div class="hdr-divider"></div>
+    <div class="temp-wrap">
+      <span class="temp-lbl">Temperature</span>
+      <select class="temp-sel" id="temperature-select">
+        <option value="0.0">0.0 — Deterministic</option>
+        <option value="0.1">0.1 — Near-Exact</option>
+        <option value="0.2">0.2 — Focused</option>
+        <option value="0.3">0.3 — Conservative</option>
+        <option value="0.4">0.4 — Balanced-Low</option>
+        <option value="0.5">0.5 — Balanced</option>
+        <option value="0.6">0.6 — Balanced-High</option>
+        <option value="0.7">0.7 — Creative</option>
+        <option value="0.8">0.8 — Expressive</option>
+        <option value="0.9">0.9 — Exploratory</option>
+        <option value="1.0">1.0 — Maximum</option>
+      </select>
+    </div>
+    <button class="settings-btn" onclick="openSettings()">⚙ Settings</button>
+  </div>
+</header>
+
+<!-- ── Layout ─────────────────────────────────────────────────────────────────── -->
+<div id="layout">
+
+  <!-- ── Sidebar ─────────────────────────────────────────────────────────────── -->
+  <aside id="sidebar">
+    <div class="sb-band">U.S. Federal Register — AI Analysis System</div>
+
+    <div class="sb-section">
+      <div class="sb-title">Model Intelligence</div>
+      <div class="stat-row">
+        <span class="stat-k">Classifier</span>
+        <span class="stat-v accent" id="s-model">v1_baseline</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-k">Accuracy</span>
+        <span class="stat-v" id="s-acc">—</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-k">Embedding</span>
+        <span class="stat-v" id="s-emb">—</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-k">Vector Store</span>
+        <span class="stat-v" id="s-vec">—</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-k">LLM Analyst</span>
+        <span class="stat-v" id="s-llm">—</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-k">Classes</span>
+        <span class="stat-v">Pos · Neu · Neg</span>
+      </div>
+    </div>
+
+    <hr class="divider" />
+
+    <div class="sb-section">
+      <div class="sb-title">Sample Regulations</div>
+
+      <button class="sample-chip" onclick="fillSample(this)">
+        <div class="chip-tag neg">Negative / Restrictive · EPA</div>
+        Environmental Protection Agency requires industrial facilities to reduce emissions by 30% or face penalties up to $50,000 per day for violations of compliance standards
+      </button>
+
+      <button class="sample-chip" onclick="fillSample(this)">
+        <div class="chip-tag neg">Negative / Restrictive · OSHA</div>
+        Occupational Safety and Health Administration mandates all construction sites implement new safety protocols or face immediate shutdown orders and enforcement sanctions
+      </button>
+
+      <button class="sample-chip" onclick="fillSample(this)">
+        <div class="chip-tag neg">Negative / Restrictive · SEC</div>
+        Securities and Exchange Commission prohibits insider trading and mandates compliance reporting with penalties and fines up to $5 million for violations
+      </button>
+
+      <button class="sample-chip" onclick="fillSample(this)">
+        <div class="chip-tag neg">Negative / Restrictive · FDA</div>
+        Food and Drug Administration restricts the sale of unapproved medical devices and mandates recall enforcement with penalties for non-compliance
+      </button>
+
+      <button class="sample-chip" onclick="fillSample(this)">
+        <div class="chip-tag pos">Positive / Supportive · SBA</div>
+        Small Business Administration announces $200 million in grants to support and promote minority-owned businesses with funding assistance and incentives
+      </button>
+
+      <button class="sample-chip" onclick="fillSample(this)">
+        <div class="chip-tag pos">Positive / Supportive · DOE</div>
+        Department of Energy provides $150 million in funding to enable renewable energy innovation and encourages clean technology development through subsidy programs
+      </button>
+
+      <button class="sample-chip" onclick="fillSample(this)">
+        <div class="chip-tag pos">Positive / Supportive · NSF</div>
+        National Science Foundation announces grants and assistance to facilitate research programs that enable and encourage scientific innovation across universities
+      </button>
+
+      <button class="sample-chip" onclick="fillSample(this)">
+        <div class="chip-tag pos">Positive / Supportive · Commerce</div>
+        Department of Commerce provides funding and support to promote small business exports and facilitates trade assistance programs for domestic manufacturers
+      </button>
+
+      <button class="sample-chip" onclick="fillSample(this)">
+        <div class="chip-tag neu">Neutral / Informational · USDA</div>
+        Department of Agriculture publishes quarterly crop production statistics and announces updated data reports on national agricultural output
+      </button>
+
+      <button class="sample-chip" onclick="fillSample(this)">
+        <div class="chip-tag neu">Neutral / Informational · Census</div>
+        Census Bureau releases updated demographic statistics from the annual community survey and publishes population data reports
+      </button>
+
+      <button class="sample-chip" onclick="fillSample(this)">
+        <div class="chip-tag neu">Neutral / Informational · BLS</div>
+        Bureau of Labor Statistics publishes monthly employment data and announces updated information on national unemployment statistics and wage reports
+      </button>
+
+      <button class="sample-chip" onclick="fillSample(this)">
+        <div class="chip-tag neu">Neutral / Informational · NARA</div>
+        National Archives and Records Administration publishes notice of updated federal records management guidelines and announces public hearing on archival procedures
+      </button>
+    </div>
+
+    <hr class="divider" />
+
+    <div class="sb-section">
+      <div class="sb-title">Analysis History</div>
+      <div id="history-list">
+        <div style="font-size:11px;color:var(--muted);text-align:center;padding:8px 0;font-style:italic;">
+          No analyses yet
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ── Analysis Panel (left) ────────────────────────────────────────────── -->
+  <div id="analysis-panel">
+
+    <!-- Input section -->
+    <div id="input-section">
+      <div class="input-label-row">
+        <div class="input-label">Enter Federal Regulation Text</div>
+        <span class="input-hint">Ctrl+Enter to analyze</span>
+      </div>
+      <textarea
+        id="reg-input"
+        placeholder="Enter any federal regulation text — e.g. &quot;Environmental Protection Agency requires industrial facilities to reduce emissions by 30% or face penalties up to $50,000 per day for violations&quot;"
+        oninput="updateCharCount()"
+      ></textarea>
+      <div class="input-footer">
+        <span class="char-count"><span id="char-count">0</span> characters</span>
+        <button class="analyze-btn" id="analyze-btn" onclick="analyzeRegulation()">
+          <span id="btn-icon">▶</span>
+          <span id="btn-text">Analyze Regulation</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Output area: result card -->
+    <div id="output-area">
+      <div class="empty-state" id="empty-state">
+        <div class="empty-seal">⚖</div>
+        <div class="empty-tag">Awaiting Input</div>
+        <div class="empty-title">Federal Regulation Analysis</div>
+        <div class="empty-sub">
+          Enter any federal regulation text above — or select a sample from the left panel —
+          and click <strong>Analyze Regulation</strong> to run sentiment classification
+          and receive an expert AI explanation powered by Claude Haiku.
+        </div>
+      </div>
+    </div>
+
+    <!-- legacy chat-bar element, hidden -->
+    <div id="chat-bar" style="display:none;"></div>
+
+  </div>
+
+  <!-- ── Chat Panel (right, always visible) ──────────────────────────────── -->
+  <div id="chat-panel">
+    <div class="chat-panel-hdr">
+      <div class="chat-panel-title">💬 Follow-up Chat</div>
+      <button class="chat-clear-btn" onclick="clearChat()">Clear</button>
+    </div>
+    <div id="chat-context-strip" class="chat-context-strip"></div>
+    <div id="context-stale" class="context-stale">
+      Input changed since the last analysis. Re-run analysis to update the chat context.
+    </div>
+
+    <!-- Message thread -->
+    <div id="chat-thread" class="chat-panel-msgs">
+      <div id="chat-empty" class="chat-panel-empty">
+        <div class="chat-panel-empty-icon">💬</div>
+        <div class="chat-panel-empty-title">Ask a follow-up question</div>
+        <div class="chat-panel-empty-sub">
+          Run an analysis first, then ask anything about the result —
+          why this sentiment, which keywords drove it, how rewording would change it,
+          or any general regulatory question.
+        </div>
+      </div>
+    </div>
+
+    <!-- Input bar -->
+    <div class="chat-panel-input-bar">
+      <textarea id="chat-input" class="chat-input" rows="1"
+        placeholder="Ask a follow-up question… (Ctrl+Enter to send)"
+        onkeydown="handleChatKey(event)"
+        style="flex:1;min-height:36px;max-height:120px;resize:none;"></textarea>
+      <button class="chat-send-btn" id="chat-send-btn" onclick="sendChat()">
+        <span id="chat-send-icon">➤</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Settings Modal -->
+<div class="overlay" id="settings-overlay">
+  <div class="modal">
+    <div class="modal-hdr">
+      <div class="modal-title">Platform Settings</div>
+      <button class="modal-close" onclick="closeSettings()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label class="field-lbl">Claude API Key</label>
+        <input type="password" class="field-input" id="api-key-input" placeholder="sk-ant-api03-…" />
+        <div class="field-hint">
+          Obtain from <strong>console.anthropic.com</strong>.
+          Stored only in session memory — never transmitted to any server except Anthropic.
+        </div>
+      </div>
+      <button class="modal-save" onclick="saveSettings()">Save Settings</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+  /* ── State ──────────────────────────────────────────────────────────────── */
+  let apiKey = '';
+  let history = [];
+  let pollerInterval = null;
+  let currentSession = null;   // active chat session ID
+  let currentContext = null;   // last analysis result (context for chat)
+  let lastAnalyzedText = '';    // text used to create currentContext
+  let currentContextStored = false;
+
+  /* ── Init ───────────────────────────────────────────────────────────────── */
+  document.addEventListener('DOMContentLoaded', () => {
+    pollStatus();
+    pollerInterval = setInterval(pollStatus, 3500);
+    document.getElementById('reg-input').addEventListener('keydown', e => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') analyzeRegulation();
+    });
+  });
+
+  /* ── Agent Status ───────────────────────────────────────────────────────── */
+  async function pollStatus() {
+    try {
+      const r = await fetch('/api/agent/status');
+      const d = await r.json();
+      const pill    = document.getElementById('agent-pill');
+      const dot     = document.getElementById('pill-dot');
+      const pillTxt = document.getElementById('pill-text');
+
+      pill.className = 'agent-pill';
+      dot.className  = 'pill-dot';
+
+      if (d.loading || (!d.ready && !d.error)) {
+        pill.classList.add('loading');
+        dot.classList.add('pulse');
+        pillTxt.textContent = 'Loading Agent…';
+      } else if (d.ready) {
+        pill.classList.add('ready');
+        pillTxt.textContent = `Agent Ready · ${d.accuracy}% acc`;
+        document.getElementById('s-acc').textContent  = d.accuracy + '%';
+        document.getElementById('s-emb').textContent  = 'MiniLM-L6';
+        document.getElementById('s-vec').textContent  = d.vocab_total ? d.vocab_total.toLocaleString() + ' vecs' : '—';
+        document.getElementById('s-llm').textContent  = 'Claude Haiku';
+        document.getElementById('s-model').textContent = d.model_name || 'v1_baseline';
+        if (!apiKey && d.has_env_key) apiKey = '__env__';
+      } else if (d.error) {
+        pill.classList.add('error');
+        pillTxt.textContent = 'Agent Error';
+      }
+    } catch { /* ignore */ }
+  }
+
+  /* ── Analyze ────────────────────────────────────────────────────────────── */
+  async function analyzeRegulation() {
+    const text = document.getElementById('reg-input').value.trim();
+    if (!text) { showToast('Please enter regulation text first.', 'err'); return; }
+    if (!apiKey) { openSettings(); showToast('Enter your Claude API key in Settings.', 'err'); return; }
+
+    // Clear previous chat session server-side
+    if (currentSession) {
+      fetch('/api/chat/clear', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: currentSession }),
+      }).catch(() => {});
+      currentSession = null;
+      currentContext = null;
+      currentContextStored = false;
+    }
+
+    setAnalyzing(true);
+    showOutput('loading');
+
+    const temperature = parseFloat(document.getElementById('temperature-select').value);
+
+    try {
+      const res = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, api_key: apiKey, temperature }),
+      });
+      const data = await res.json();
+
+      if (data.error) {
+        showOutput('error', data.error);
+      } else {
+        showOutput('result', data);
+        addToHistory(data);
+      }
+    } catch (err) {
+      showOutput('error', err.message);
+    } finally {
+      setAnalyzing(false);
+    }
+  }
+
+  function setAnalyzing(on) {
+    const btn = document.getElementById('analyze-btn');
+    const ico = document.getElementById('btn-icon');
+    const txt = document.getElementById('btn-text');
+    btn.disabled = on;
+    if (on) {
+      ico.innerHTML = '<div style="width:13px;height:13px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;display:inline-block;"></div>';
+      txt.textContent = 'Analyzing…';
+    } else {
+      ico.textContent = '▶';
+      txt.textContent = 'Analyze Regulation';
+    }
+  }
+
+  /* ── Render Output ──────────────────────────────────────────────────────── */
+  function showOutput(mode, data) {
+    const area  = document.getElementById('output-area');
+    const empty = document.getElementById('empty-state');
+
+    if (mode === 'loading') {
+      empty && (empty.style.display = 'none');
+      area.innerHTML = `
+        <div class="analyzing-state">
+          <div class="analyze-spinner"></div>
+          <div class="analyzing-text">Analyzing Regulation…</div>
+          <div class="analyzing-sub">embed → predict → retrieve → explain → format</div>
+        </div>`;
+      return;
+    }
+
+    if (mode === 'error') {
+      area.innerHTML = `
+        <div class="analyzing-state">
+          <div style="font-size:32px;opacity:.35">⚠</div>
+          <div style="font-family:'Merriweather',serif;font-size:18px;color:var(--text-2);font-weight:700;">Analysis Failed</div>
+          <div style="font-size:12.5px;color:var(--fed-red);max-width:420px;text-align:center;line-height:1.55;">${esc(data)}</div>
+        </div>`;
+      return;
+    }
+
+    /* Full result */
+    const d = data;
+    const sentClass = { 'Negative': 'sb-negative', 'Positive': 'sb-positive', 'Neutral': 'sb-neutral' }[d.sentiment] || 'sb-neutral';
+    const sentLabel = displaySentiment(d.sentiment);
+    const p = d.probabilities;
+    const temp = parseFloat(document.getElementById('temperature-select').value).toFixed(1);
+
+    const stepsHtml = (d.processing_steps || []).map((s, i, arr) =>
+      `<span class="pipeline-step">${esc(s)}</span>${i < arr.length - 1 ? '<span class="pipeline-arrow">→</span>' : ''}`
+    ).join('');
+
+    const simExamples = d.similar_examples || [];
+    const similarHtml = `<div class="rc-similar">
+        <div class="similar-title">RAG Retrieval · ${simExamples.length} similar regulation${simExamples.length !== 1 ? 's' : ''} retrieved from vector database</div>
+        ${simExamples.length > 0
+          ? simExamples.map(ex => `<div class="similar-item">
+                <span class="similar-sentiment-badge">${esc(displaySentiment(ex.sentiment))}</span>
+                <div class="similar-body">
+                  ${ex.agencies ? `<div class="similar-agency">${esc(ex.agencies)}</div>` : ''}
+                  <div class="similar-text">${esc(ex.text)}</div>
+                </div>
+              </div>`).join('')
+          : '<div class="similar-item similar-empty">No matching regulations found in vector database for this classification.</div>'
+        }
+      </div>`;
+
+    const simCount = simExamples.length;
+    const explanationHtml = d.explanation
+      ? `<div class="rc-explain">
+          <div class="explain-header">
+            <div class="claude-badge"><span class="claude-badge-txt">Claude Haiku</span></div>
+            <div class="explain-meta">Similarity Analysis · Based on ${simCount} retrieved regulation${simCount !== 1 ? 's' : ''} · Temperature ${temp}</div>
+          </div>
+          <div class="explain-content">${formatExplanation(d.explanation)}</div>
+        </div>`
+      : '';
+
+    const modelShort = (d.model_info.split(' ')[0] || 'v1_baseline');
+    const modelAcc   = (d.model_info.match(/[\d.]+%/) || [''])[0];
+
+    area.innerHTML = `
+      <div class="result-card">
+        <div class="rc-band">
+          <div class="rc-band-dot"></div>
+          Federal Regulation Sentiment Analysis Report
+        </div>
+
+        <div class="rc-header">
+          <div class="rc-reg-text">${esc(d.regulation)}</div>
+          <div class="sentiment-badge ${sentClass}">${esc(sentLabel)}</div>
+        </div>
+
+        <div class="rc-metrics">
+          <div class="metric-cell">
+            <div class="metric-label">Confidence Score</div>
+            <div class="metric-value">${d.confidence}<span class="unit">%</span></div>
+            <div class="metric-sub">Classification certainty</div>
+          </div>
+          <div class="metric-cell">
+            <div class="metric-label">ML Model</div>
+            <div class="metric-value" style="font-size:20px;padding-top:4px;">${esc(modelShort)}</div>
+            <div class="metric-sub">Accuracy: ${modelAcc}</div>
+          </div>
+          <div class="metric-cell">
+            <div class="metric-label">Agent Pipeline</div>
+            <div class="metric-value" style="font-size:20px;padding-top:4px;">${(d.processing_steps || []).length} <span class="unit">nodes</span></div>
+            <div class="metric-sub">${d.similar_count > 0 ? `${d.similar_count} examples retrieved via RAG` : 'RAG retrieval complete'}</div>
+          </div>
+        </div>
+
+        <div class="rc-proba">
+          <div class="proba-title">Probability Distribution</div>
+          <div class="proba-row">
+            <span class="proba-name">Positive</span>
+            <div class="proba-track"><div class="proba-fill pos" style="width:${p.positive}%"></div></div>
+            <span class="proba-pct">${p.positive}%</span>
+          </div>
+          <div class="proba-row">
+            <span class="proba-name">Neutral</span>
+            <div class="proba-track"><div class="proba-fill neu" style="width:${p.neutral}%"></div></div>
+            <span class="proba-pct">${p.neutral}%</span>
+          </div>
+          <div class="proba-row">
+            <span class="proba-name">Restrictive</span>
+            <div class="proba-track"><div class="proba-fill neg" style="width:${p.restrictive}%"></div></div>
+            <span class="proba-pct">${p.restrictive}%</span>
+          </div>
+        </div>
+
+        ${similarHtml}
+        ${explanationHtml}
+
+        <div class="rc-pipeline">
+          <span class="pipeline-label">Pipeline</span>
+          ${stepsHtml}
+        </div>
+      </div>`;
+
+    /* ── Wire up chat session ───────────────────────────────────────── */
+    currentSession = 'sess_' + Math.random().toString(36).slice(2) + Date.now();
+    currentContext = d;
+    currentContextStored = false;
+    lastAnalyzedText = d.regulation || '';
+    setContextStale(false);
+    updateChatContextStrip(d);
+    persistChatContext(currentSession, d);
+
+    // Clear chat panel and hide the empty placeholder
+    const emptyEl = document.getElementById('chat-empty');
+    if (emptyEl) emptyEl.style.display = 'none';
+    // Remove old messages (keep the empty placeholder node)
+    const thread = document.getElementById('chat-thread');
+    if (thread) {
+      Array.from(thread.querySelectorAll('.chat-msg, .suggestion-row')).forEach(el => el.remove());
+    }
+
+    // Post opening AI message into the right panel
+    appendChatMsg('assistant',
+      `I've analyzed this regulation and classified it as **${sentLabel}** with **${d.confidence}% confidence**. Ask a follow-up or choose a suggested question below.`
+    );
+    renderSuggestionChips();
+
+    // Focus chat input
+    setTimeout(() => {
+      const ci = document.getElementById('chat-input');
+      if (ci) ci.focus();
+    }, 120);
+  }
+
+  /* ── History ────────────────────────────────────────────────────────────── */
+  function addToHistory(result) {
+    history.unshift(result);
+    if (history.length > 10) history.pop();
+    renderHistory();
+  }
+
+  function renderHistory() {
+    const el = document.getElementById('history-list');
+    if (!history.length) {
+      el.innerHTML = '<div style="font-size:11px;color:var(--muted);text-align:center;padding:8px 0;font-style:italic;">No analyses yet</div>';
+      return;
+    }
+    el.innerHTML = history.map((h, i) => {
+      const color = { Negative: 'var(--fed-red)', Positive: 'var(--green)', Neutral: 'var(--amber)' }[h.sentiment] || 'var(--muted)';
+      return `<div class="hist-item" onclick="reloadHistory(${i})">
+        <div class="hist-sentiment" style="color:${color}">${displaySentiment(h.sentiment)} · ${h.confidence}%</div>
+        <div class="hist-text">${esc(h.regulation.substring(0, 72))}…</div>
+      </div>`;
+    }).join('');
+  }
+
+  function reloadHistory(i) {
+    const h = history[i];
+    document.getElementById('reg-input').value = h.regulation;
+    updateCharCount();
+    showOutput('result', h);
+  }
+
+  /* ── Samples ────────────────────────────────────────────────────────────── */
+  function fillSample(btn) {
+    const lines = btn.innerText.trim().split('\n');
+    const text  = lines.slice(1).join(' ').trim();
+    document.getElementById('reg-input').value = text;
+    updateCharCount();
+    document.getElementById('reg-input').focus();
+  }
+
+  function updateCharCount() {
+    const input = document.getElementById('reg-input');
+    document.getElementById('char-count').textContent = input.value.length;
+    if (currentContext && lastAnalyzedText && input.value.trim() !== lastAnalyzedText.trim()) {
+      setContextStale(true);
+    } else {
+      setContextStale(false);
+    }
+  }
+
+  /* ── Settings ───────────────────────────────────────────────────────────── */
+  function openSettings() {
+    document.getElementById('api-key-input').value = (apiKey === '__env__') ? '' : apiKey;
+    document.getElementById('settings-overlay').classList.add('open');
+  }
+  function closeSettings() {
+    document.getElementById('settings-overlay').classList.remove('open');
+  }
+  function saveSettings() {
+    apiKey = document.getElementById('api-key-input').value.trim() || '__env__';
+    closeSettings();
+    showToast('Settings saved.', 'ok');
+  }
+
+  /* ── Utils ──────────────────────────────────────────────────────────────── */
+  function esc(s) {
+    if (!s) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function displaySentiment(sentiment) {
+    return sentiment === 'Negative' ? 'Restrictive' : (sentiment || 'Unknown');
+  }
+
+  function activeContextTags() {
+    if (!currentContext || !currentContext.regulation) return [];
+    const tags = ['Classification', 'Probabilities'];
+    if ((currentContext.similar_examples || []).length) tags.push('Similar examples');
+    if (currentContext.explanation) tags.push('Original explanation');
+    return tags;
+  }
+
+  function updateChatContextStrip(ctx) {
+    const strip = document.getElementById('chat-context-strip');
+    if (!strip) return;
+    if (!ctx) {
+      strip.classList.remove('active');
+      strip.innerHTML = '';
+      return;
+    }
+
+    const simCount = (ctx.similar_examples || []).length;
+    const modelShort = ((ctx.model_info || '').split(' ')[0] || 'v1_baseline');
+    strip.innerHTML = `
+      <span class="context-chip"><strong>${esc(displaySentiment(ctx.sentiment))}</strong>${esc(ctx.confidence)}%</span>
+      <span class="context-chip">${simCount} similar reg${simCount !== 1 ? 's' : ''}</span>
+      <span class="context-chip">${esc(modelShort)}</span>
+    `;
+    strip.classList.add('active');
+  }
+
+  function setContextStale(isStale) {
+    const stale = document.getElementById('context-stale');
+    if (stale) stale.classList.toggle('active', !!isStale);
+  }
+
+  async function persistChatContext(sessionId, context) {
+    if (!sessionId || !context) return;
+    try {
+      const res = await fetch('/api/chat/context', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: sessionId, context }),
+      });
+      currentContextStored = res.ok;
+    } catch { /* chat can still fall back to client context if needed */ }
+  }
+
+  function renderSuggestionChips() {
+    const thread = document.getElementById('chat-thread');
+    if (!thread) return;
+    const row = document.createElement('div');
+    row.className = 'suggestion-row';
+    [
+      'Why this sentiment?',
+      'What drove the classification?',
+      'Compare similar regulations',
+      'How could wording change the result?'
+    ].forEach(text => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'suggestion-chip';
+      btn.textContent = text;
+      btn.onclick = () => {
+        const input = document.getElementById('chat-input');
+        if (input) {
+          input.value = text;
+          input.focus();
+        }
+        row.remove();
+        sendChat();
+      };
+      row.appendChild(btn);
+    });
+    thread.appendChild(row);
+    scrollChatBottom();
+  }
+
+  const KW_RESTRICTIVE = new Set(['requires','mandates','prohibits','penalty','penalties','violation','violations','enforcement','compliance','must','shall','restrict','ban','fine','sanctions']);
+  const KW_SUPPORTIVE  = new Set(['grants','funding','assistance','support','provides','facilitates','enables','encourages','incentive','subsidy','aid','help','promote']);
+  const KW_NEUTRAL     = new Set(['publishes','announces','reports','updates','notice','information','data','statistics','meeting','hearing']);
+
+  function highlightKeywords(line) {
+    return line.replace(/\b([a-zA-Z]+)\b/g, (word) => {
+      const lc = word.toLowerCase();
+      if (KW_RESTRICTIVE.has(lc)) return `<mark class="kw-neg">${word}</mark>`;
+      if (KW_SUPPORTIVE.has(lc))  return `<mark class="kw-pos">${word}</mark>`;
+      if (KW_NEUTRAL.has(lc))     return `<mark class="kw-neu">${word}</mark>`;
+      return word;
+    });
+  }
+
+  function formatExplanation(text) {
+    const escaped = text
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+    const lines = escaped.split('\n');
+    let html = '';
+    let inList = false;
+
+    for (let i = 0; i < lines.length; i++) {
+      let line = lines[i].trim();
+      if (!line) {
+        if (inList) { html += '</ol>'; inList = false; }
+        continue;
+      }
+
+      // Bold **text** and italic *text*
+      line = line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+      line = line.replace(/\*(.*?)\*/g, '<em>$1</em>');
+
+      // Numbered list: "1. " or dash "- "
+      const numMatch  = line.match(/^(\d+)\.\s+(.+)/);
+      const dashMatch = line.match(/^[-•]\s+(.+)/);
+
+      if (numMatch || dashMatch) {
+        if (!inList) { html += '<ol class="explain-list">'; inList = true; }
+        const content = highlightKeywords(numMatch ? numMatch[2] : dashMatch[1]);
+        html += `<li>${content}</li>`;
+      } else {
+        if (inList) { html += '</ol>'; inList = false; }
+        if (line.match(/^<strong>.*<\/strong>\s*$/) || line.match(/:$/)) {
+          html += `<p class="explain-section">${line}</p>`;
+        } else {
+          html += `<p>${highlightKeywords(line)}</p>`;
+        }
+      }
+    }
+    if (inList) html += '</ol>';
+    return html;
+  }
+
+  function formatChatMessage(text) {
+    const escaped = String(text || '')
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+    const lines = escaped.split('\n');
+    let html = '';
+    let inList = false;
+
+    for (let i = 0; i < lines.length; i++) {
+      let line = lines[i].trim();
+      if (!line) {
+        if (inList) { html += '</ul>'; inList = false; }
+        continue;
+      }
+
+      line = line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+      line = line.replace(/\*(.*?)\*/g, '<em>$1</em>');
+
+      const bulletMatch = line.match(/^[-•]\s+(.+)/);
+      const numberedMatch = line.match(/^\d+\.\s+(.+)/);
+      if (bulletMatch || numberedMatch) {
+        if (!inList) { html += '<ul class="explain-list">'; inList = true; }
+        html += `<li>${bulletMatch ? bulletMatch[1] : numberedMatch[1]}</li>`;
+      } else {
+        if (inList) { html += '</ul>'; inList = false; }
+        html += `<p>${line}</p>`;
+      }
+    }
+
+    if (inList) html += '</ul>';
+    return html;
+  }
+
+  let toastTimer;
+  function showToast(msg, type = '') {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className   = `show ${type}`;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.className = '', 3200);
+  }
+
+  /* ── Chat ───────────────────────────────────────────────────────────────── */
+  async function sendChat() {
+    const input = document.getElementById('chat-input');
+    if (!input) return;
+    const message = (input.value || '').trim();
+    if (!message) return;
+    if (!currentSession) {
+      // Start a fresh session even without a prior analysis
+      currentSession = 'sess_' + Math.random().toString(36).slice(2) + Date.now();
+      currentContext = {};
+      const emptyEl = document.getElementById('chat-empty');
+      if (emptyEl) emptyEl.style.display = 'none';
+    }
+    if (!apiKey) { openSettings(); showToast('Enter your Claude API key in Settings.', 'err'); return; }
+
+    const sendBtn = document.getElementById('chat-send-btn');
+    if (sendBtn) sendBtn.disabled = true;
+    input.value = '';
+    input.style.height = 'auto';
+
+    appendChatMsg('user', message);
+
+    // Thinking indicator
+    const thinkId = 'think_' + Date.now();
+    const thinkEl = document.createElement('div');
+    thinkEl.className = 'chat-msg assistant';
+    thinkEl.id = thinkId;
+    thinkEl.innerHTML = `
+      <div class="chat-avatar">AI</div>
+      <div class="chat-bubble">
+        <div class="chat-thinking"><span></span><span></span><span></span></div>
+      </div>`;
+    const thread = document.getElementById('chat-thread');
+    if (thread) { thread.appendChild(thinkEl); scrollChatBottom(); }
+
+    const temperature = parseFloat(document.getElementById('temperature-select').value);
+
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          session_id: currentSession,
+          message,
+          context: currentContextStored ? {} : currentContext,
+          api_key: apiKey,
+          temperature,
+        }),
+      });
+      const data = await res.json();
+      const te = document.getElementById(thinkId);
+      if (te) te.remove();
+      appendChatMsg('assistant', data.error ? '⚠ ' + data.error : data.reply);
+    } catch (err) {
+      const te = document.getElementById(thinkId);
+      if (te) te.remove();
+      appendChatMsg('assistant', '⚠ Network error: ' + err.message);
+    } finally {
+      if (sendBtn) sendBtn.disabled = false;
+      if (input) input.focus();
+    }
+  }
+
+  function appendChatMsg(role, content) {
+    const thread = document.getElementById('chat-thread');
+    if (!thread) return;
+    const div = document.createElement('div');
+    div.className = 'chat-msg ' + role;
+    const label = role === 'user' ? 'You' : 'AI';
+    const bubble = role === 'assistant' ? formatChatMessage(content) : esc(content);
+    div.innerHTML = `<div class="chat-avatar">${label}</div><div class="chat-bubble">${bubble}</div>`;
+    thread.appendChild(div);
+    scrollChatBottom();
+  }
+
+  function scrollChatBottom() {
+    const thread = document.getElementById('chat-thread');
+    if (thread) setTimeout(() => { thread.scrollTop = thread.scrollHeight; }, 30);
+  }
+
+  function clearChat() {
+    if (currentSession) {
+      fetch('/api/chat/clear', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: currentSession }),
+      }).catch(() => {});
+      currentSession = null;
+      currentContext = null;
+      currentContextStored = false;
+      lastAnalyzedText = '';
+    }
+    const thread = document.getElementById('chat-thread');
+    if (thread) Array.from(thread.querySelectorAll('.chat-msg, .suggestion-row')).forEach(el => el.remove());
+    const emptyEl = document.getElementById('chat-empty');
+    if (emptyEl) emptyEl.style.display = 'flex';
+    updateChatContextStrip(null);
+    setContextStale(false);
+  }
+
+  function handleChatKey(e) {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); sendChat(); return; }
+    // Auto-resize textarea
+    const ta = e.target;
+    ta.style.height = 'auto';
+    ta.style.height = Math.min(ta.scrollHeight, 120) + 'px';
+  }
+</script>
+</body>
+</html>
